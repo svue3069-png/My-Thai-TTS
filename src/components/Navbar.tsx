@@ -1,5 +1,6 @@
 import React from 'react';
 import { Volume2, Moon, Sun, Wifi, WifiOff, Sparkles, Music, Mic, History, Share2, HelpCircle } from 'lucide-react';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface NavbarProps {
   activeTab: 'tts' | 'song' | 'history' | 'export' | 'guide';
@@ -102,6 +103,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Right Controls */}
           <div className="flex items-center space-x-2">
+            {/* PWA Install Button */}
+            <PWAInstallButton variant="navbar" />
+
             {/* Offline Mode Toggle Button */}
             <button
               onClick={() => setIsOfflineMode(!isOfflineMode)}

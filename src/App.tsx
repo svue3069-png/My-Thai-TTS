@@ -15,6 +15,7 @@ import { ThaiLyricsModal } from './components/ThaiLyricsModal';
 import { AudioItem } from './types';
 import { getAllAudioItems, getStorageQuota } from './services/storage';
 import { Sparkles, Music, Mic, History, Download, BookOpen, Volume2 } from 'lucide-react';
+import { PWAInstallButton } from './components/PWAInstallButton';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'tts' | 'song' | 'history' | 'export' | 'guide'>('tts');
@@ -95,12 +96,15 @@ export default function App() {
       />
 
       {/* Main Studio Viewport */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+        {/* PWA Install Promotion Banner */}
+        <PWAInstallButton variant="banner" />
+
         {/* Quick action bar for Lyrics Assistant */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>สตูดิโอพร้อมใช้งาน: ระบบเสียง 48kHz &bull; 7-TET &bull; IndexedDB แคชในเครื่อง</span>
+            <span>สตูดิโอพร้อมใช้งาน: ระบบเสียง 48kHz &bull; 7-TET &bull; รองรับการติดตั้งและใช้งานออฟไลน์</span>
           </div>
 
           <button
