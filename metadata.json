@@ -1,0 +1,6 @@
+{
+  "name": "Thai TTS & Traditional Song Studio",
+  "description": "Natural-sounding Thai Text-to-Speech with offline playback, speed/pitch controls, history, studio export, and a Thai traditional music arranger for local artists.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
