@@ -1,5 +1,17 @@
 export type AudioType = 'tts' | 'song';
 
+export interface TokenUsage {
+  promptTokenCount: number;
+  candidatesTokenCount: number;
+  totalTokenCount: number;
+}
+
+export interface AudioChunk {
+  text: string;
+  duration: number;
+  startOffset: number;
+}
+
 export interface AudioItem {
   id: string;
   title: string;
@@ -16,6 +28,8 @@ export interface AudioItem {
   tags: string[];
   favorite: boolean;
   songData?: SongProject;
+  tokenUsage?: TokenUsage;
+  chunks?: AudioChunk[];
 }
 
 export type ThaiScale = 'thai7tet' | 'pentatonic';

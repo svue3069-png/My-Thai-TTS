@@ -14,8 +14,9 @@ import { GuideModal } from './components/GuideModal';
 import { ThaiLyricsModal } from './components/ThaiLyricsModal';
 import { AudioItem } from './types';
 import { getAllAudioItems, getStorageQuota } from './services/storage';
-import { Sparkles, Music, Mic, History, Download, BookOpen, Volume2 } from 'lucide-react';
+import { Download, Volume2 } from 'lucide-react';
 import { PWAInstallButton } from './components/PWAInstallButton';
+import { TokenUsageModal } from './components/TokenUsageModal';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'tts' | 'song' | 'history' | 'export' | 'guide'>('tts');
@@ -29,6 +30,7 @@ export default function App() {
   const [exportModalItem, setExportModalItem] = useState<AudioItem | null>(null);
   const [songAttachedVocal, setSongAttachedVocal] = useState<AudioItem | null>(null);
   const [showLyricsModal, setShowLyricsModal] = useState<boolean>(false);
+  const [showTokenLimitsModal, setShowTokenLimitsModal] = useState<boolean>(false);
   const [storageCount, setStorageCount] = useState<number>(0);
 
   // Sync dark mode class to root document element
@@ -65,6 +67,8 @@ export default function App() {
 
   useEffect(() => {
     refreshStorageCount();
+    window.addEventListener('storage-changed', refreshStorageCount);
+    return () => window.removeEventListener('storage-changed', refreshStorageCount);
   }, [activeTab]);
 
   // Handlers for cross-tab communication
@@ -93,6 +97,7 @@ export default function App() {
         isOfflineMode={isOfflineMode}
         setIsOfflineMode={setIsOfflineMode}
         storageCount={storageCount}
+        onOpenTokenLimits={() => setShowTokenLimitsModal(true)}
       />
 
       {/* Main Studio Viewport */}
@@ -100,20 +105,29 @@ export default function App() {
         {/* PWA Install Promotion Banner */}
         <PWAInstallButton variant="banner" />
 
-        {/* Quick action bar for Lyrics Assistant */}
-        <div className="flex items-center justify-between">
+        {/* Quick action bar for Lyrics Assistant & Free Tier Token Status */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>สตูดิโอพร้อมใช้งาน: ระบบเสียง 48kHz &bull; 7-TET &bull; รองรับการติดตั้งและใช้งานออฟไลน์</span>
+            <span>สตูดิโอเสียงภาษาไทย &bull; 48kHz &bull; 7-TET &bull; Gemini Free Tier</span>
           </div>
 
-          <button
-            onClick={() => setShowLyricsModal(true)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-amber-500 to-emerald-600 text-white shadow-xs hover:opacity-95 transition-opacity"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>ขอไอเดียคำกลอน &amp; เนื้อร้อง</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowTokenLimitsModal(true)}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 hover:bg-amber-100 transition-colors"
+            >
+              <span className="text-amber-500">⚡</span>
+              <span>โควตา &amp; ขีดจำกัดโทเค็นฟรี</span>
+            </button>
+
+            <button
+              onClick={() => setShowLyricsModal(true)}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-amber-500 to-emerald-600 text-white shadow-xs hover:opacity-95 transition-opacity"
+            >
+              <span>ขอไอเดียคำกลอน &amp; เนื้อร้อง</span>
+            </button>
+          </div>
         </div>
 
         {/* Tab 1: Thai TTS Studio */}
@@ -122,6 +136,7 @@ export default function App() {
             onAudioGenerated={handleAudioGenerated}
             onSendToSongMaker={handleSendToSongMaker}
             onOpenExport={handleOpenExport}
+            onOpenTokenLimits={() => setShowTokenLimitsModal(true)}
             isOfflineMode={isOfflineMode}
           />
         )}
@@ -222,6 +237,7 @@ export default function App() {
             duration: currentPlayingAudio.duration,
             text: currentPlayingAudio.text,
             voiceName: currentPlayingAudio.voiceName,
+            chunks: currentPlayingAudio.chunks,
           }}
           onClose={() => setCurrentPlayingAudio(null)}
           onSendToSongMaker={(item) => handleSendToSongMaker(currentPlayingAudio)}
@@ -245,6 +261,14 @@ export default function App() {
             // If user applies lyrics, switch to TTS studio with the new lyrics
             setActiveTab('tts');
           }}
+        />
+      )}
+
+      {/* Free Tier Token Usage & Limits Modal */}
+      {showTokenLimitsModal && (
+        <TokenUsageModal
+          onClose={() => setShowTokenLimitsModal(false)}
+          isOfflineMode={isOfflineMode}
         />
       )}
     </div>

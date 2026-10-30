@@ -113,6 +113,23 @@ export const GuideModal: React.FC<GuideModalProps> = ({ onClose }) => {
               ทุกไฟล์เสียงที่สร้างจะถูกเก็บไว้ใน <strong>IndexedDB</strong> ในเบราว์เซอร์ของคุณโดยอัตโนมัติ ไม่มีการส่งข้อมูลส่วนตัวออกไปภายนอก และคุณสามารถฟังซ้ำหรือปรับแต่งเสียงได้แม้ไม่มีสัญญาณอินเทอร์เน็ต
             </p>
           </div>
+
+          {/* Section 6: Free Tier Token Limits */}
+          <div className="space-y-2">
+            <h3 className="font-heading font-semibold text-base text-slate-900 dark:text-white flex items-center space-x-2">
+              <span className="text-amber-500">⚡</span>
+              <span>6. การใช้งานโทเค็นและขีดจำกัดเวอร์ชันฟรี (Free Tier Limits)</span>
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              แอปพลิเคชันเชื่อมต่อกับโมเดล Google AI Studio เวอร์ชันฟรี โดยมีขีดจำกัดโควตามาตรฐานดังนี้:
+            </p>
+            <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1 list-disc pl-5">
+              <li><strong>1,500 คำขอต่อวัน (RPD):</strong> สังเคราะห์เสียงและประพันธ์คำร้องได้สูงสุด 1,500 ครั้งต่อวันโดยไม่มีค่าใช้จ่าย</li>
+              <li><strong>15 คำขอต่อนาที (RPM):</strong> อัตราการเรียกใช้งานสูงสุด 15 ครั้งใน 1 นาที</li>
+              <li><strong>1,000,000 โทเค็นต่อนาที (TPM):</strong> ขีดจำกัดความเร็วการประมวลผลโทเค็น</li>
+              <li><strong>โหมดออฟไลน์ (0 โทเค็น):</strong> สังเคราะห์เสียงด้วยระบบในเครื่องได้ฟรีไม่จำกัดจำนวนครั้ง</li>
+            </ul>
+          </div>
         </div>
 
         {/* Footer */}

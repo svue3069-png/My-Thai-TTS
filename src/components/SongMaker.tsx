@@ -44,10 +44,15 @@ export const SongMaker: React.FC<SongMakerProps> = ({
 
   // Load available TTS vocals from storage
   useEffect(() => {
-    getAllAudioItems().then((items) => {
-      const ttsItems = items.filter((i) => i.type === 'tts');
-      setAvailableVocals(ttsItems);
-    });
+    const loadVocals = () => {
+      getAllAudioItems().then((items) => {
+        const ttsItems = items.filter((i) => i.type === 'tts');
+        setAvailableVocals(ttsItems);
+      });
+    };
+    loadVocals();
+    window.addEventListener('storage-changed', loadVocals);
+    return () => window.removeEventListener('storage-changed', loadVocals);
   }, []);
 
   // Sync initial attached vocal if passed from outside
@@ -395,53 +400,72 @@ export const SongMaker: React.FC<SongMakerProps> = ({
       </div>
 
       {/* Live Instrument Playable Keyboard & Virtual Pads */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-3">
-        <div className="flex items-center justify-between">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center space-x-2">
-            <span className="text-sm font-semibold text-slate-900 dark:text-white flex items-center space-x-1.5">
-              <span>แป้นสัมผัสจำลองเสียงเครื่องดนตรีไทย (Virtual Instrument Pads)</span>
-            </span>
-            <span className="text-[11px] text-slate-400 hidden sm:inline">
-              (คลิกหรือแตะเพื่อลองฟังเสียงสด)
-            </span>
+            <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-sm font-semibold text-slate-900 dark:text-white block">
+                แป้นสัมผัสจำลองเสียงเครื่องดนตรีไทย (Virtual Thai Instruments)
+              </span>
+              <span className="text-[11px] text-slate-500">
+                คลิกหรือแตะเพื่อลองบรรเลงสดตามจังหวะ {song.bpm <= 72 ? 'สามชั้น (ช้า)' : song.bpm <= 96 ? 'สองชั้น (กลาง)' : 'ชั้นเดียว (เร็ว)'}
+              </span>
+            </div>
           </div>
 
           {/* Instrument select for live pads */}
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center flex-wrap gap-1">
             {song.tracks.map((t) => (
               <button
                 key={t.id}
                 onClick={() => setLiveInstrumentId(t.id)}
-                className={`px-2 py-1 text-xs rounded-lg transition-colors flex items-center space-x-1 ${
+                className={`px-2.5 py-1.5 text-[11px] rounded-xl transition-all flex items-center space-x-1.5 border ${
                   liveInstrumentId === t.id
-                    ? 'bg-emerald-600 text-white font-medium shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    ? 'bg-emerald-600 text-white border-emerald-600 font-bold shadow-sm shadow-emerald-500/20'
+                    : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-emerald-400'
                 }`}
                 title={t.thaiName}
               >
                 <span>{t.icon}</span>
-                <span className="hidden md:inline">{t.thaiName}</span>
+                <span className="hidden sm:inline">{t.thaiName}</span>
               </button>
             ))}
           </div>
         </div>
 
         {/* The Sound Keys / Bars */}
-        <div className="grid grid-cols-7 sm:grid-cols-14 gap-1.5 pt-1">
+        <div className="grid grid-cols-4 sm:grid-cols-7 lg:grid-cols-14 gap-2">
           {scaleNotes.map((note, idx) => (
             <button
               key={idx}
               onClick={() => thaiAudioEngine.playNote(liveInstrumentId, idx, song.scale, 0.9)}
-              className="py-3 px-1 rounded-xl bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-850 border border-slate-200 dark:border-slate-700/80 hover:border-emerald-500 hover:from-emerald-50 hover:to-emerald-100 dark:hover:from-emerald-950/40 dark:hover:to-emerald-900/40 active:scale-95 transition-all text-center group shadow-xs"
+              className="py-4 px-1 rounded-2xl bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-850 border border-slate-200 dark:border-slate-700/80 hover:border-emerald-500 hover:from-emerald-50 hover:to-emerald-100 dark:hover:from-emerald-900/40 dark:hover:to-emerald-800/40 active:scale-90 active:ring-2 active:ring-emerald-500/30 transition-all text-center group shadow-xs relative overflow-hidden"
             >
-              <div className="text-base font-bold font-heading text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
+              <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500/10 group-hover:bg-emerald-500/30 transition-colors" />
+              <div className="text-lg font-bold font-heading text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
                 {note.name}
               </div>
-              <div className="text-[10px] text-slate-400 font-mono">
+              <div className="text-[10px] text-slate-400 font-mono uppercase tracking-tighter">
                 {note.solfege}
               </div>
             </button>
           ))}
+        </div>
+
+        {/* Rhythm Guide Info */}
+        <div className="pt-2 flex flex-wrap items-center gap-x-6 gap-y-2 text-[10px] border-t border-slate-100 dark:border-slate-800/60">
+          <div className="flex items-center space-x-1.5 text-slate-500">
+            <Info className="w-3 h-3 text-amber-500" />
+            <span className="font-semibold text-slate-700 dark:text-slate-300">คู่มือจังหวะฉิ่ง:</span>
+            <span>คู่ (Ching) = เสียงกังวาน / คี่ (Chap) = เสียงสั้น</span>
+          </div>
+          <div className="flex items-center space-x-1.5 text-slate-500">
+            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+            <span>ด - ร - ม - ฟ - ซ - ล - ท (ระบบ 7 เสียงเท่ากันแบบไทยเดิม)</span>
+          </div>
         </div>
       </div>
 

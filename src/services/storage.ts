@@ -30,7 +30,10 @@ export async function saveAudioItem(item: AudioItem): Promise<string> {
     const store = transaction.objectStore(STORE_NAME);
     const request = store.put(item);
 
-    request.onsuccess = () => resolve(item.id);
+    request.onsuccess = () => {
+      window.dispatchEvent(new CustomEvent('storage-changed'));
+      resolve(item.id);
+    };
     request.onerror = () => reject(request.error);
   });
 }
@@ -71,7 +74,10 @@ export async function deleteAudioItem(id: string): Promise<void> {
     const store = transaction.objectStore(STORE_NAME);
     const request = store.delete(id);
 
-    request.onsuccess = () => resolve();
+    request.onsuccess = () => {
+      window.dispatchEvent(new CustomEvent('storage-changed'));
+      resolve();
+    };
     request.onerror = () => reject(request.error);
   });
 }
@@ -116,7 +122,10 @@ export async function clearAllAudioItems(): Promise<void> {
     const transaction = db.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
     const request = store.clear();
-    request.onsuccess = () => resolve();
+    request.onsuccess = () => {
+      window.dispatchEvent(new CustomEvent('storage-changed'));
+      resolve();
+    };
     request.onerror = () => reject(request.error);
   });
 }

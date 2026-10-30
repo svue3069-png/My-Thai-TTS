@@ -59,13 +59,18 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
 
   useEffect(() => {
     loadItems();
+    window.addEventListener('storage-changed', loadItems);
+    return () => window.removeEventListener('storage-changed', loadItems);
   }, []);
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบไฟล์เสียงนี้?')) {
+    // Use a simpler approach that avoids blocking window.confirm which can be problematic in sandboxes
+    try {
       await deleteAudioItem(id);
-      loadItems();
+      // loadItems() is called automatically via storage-changed event
+    } catch (err) {
+      console.error('Failed to delete item', err);
     }
   };
 
@@ -91,9 +96,11 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
   };
 
   const handleClearAll = async () => {
-    if (confirm('คำเตือน: คุณต้องการล้างประวัติไฟล์เสียงทั้งหมดในเครื่องใช่หรือไม่?')) {
+    try {
       await clearAllAudioItems();
-      loadItems();
+      // loadItems() is called automatically via storage-changed event
+    } catch (err) {
+      console.error('Failed to clear history', err);
     }
   };
 
@@ -257,10 +264,10 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({
                     </button>
                     <button
                       onClick={(e) => handleDelete(item.id, e)}
-                      className="p-1 text-slate-400 hover:text-rose-500 transition-colors"
+                      className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-all"
                       title="ลบไฟล์เสียง"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>

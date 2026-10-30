@@ -1,6 +1,7 @@
-import React from 'react';
-import { Volume2, Moon, Sun, Wifi, WifiOff, Sparkles, Music, Mic, History, Share2, HelpCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Volume2, Moon, Sun, Wifi, WifiOff, Sparkles, Music, Mic, History, Share2, HelpCircle, Zap } from 'lucide-react';
 import { PWAInstallButton } from './PWAInstallButton';
+import { getTokenStats, FREE_TIER_LIMITS } from '../services/tokenTracker';
 
 interface NavbarProps {
   activeTab: 'tts' | 'song' | 'history' | 'export' | 'guide';
@@ -10,6 +11,7 @@ interface NavbarProps {
   isOfflineMode: boolean;
   setIsOfflineMode: (val: boolean) => void;
   storageCount: number;
+  onOpenTokenLimits?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -20,7 +22,16 @@ export const Navbar: React.FC<NavbarProps> = ({
   isOfflineMode,
   setIsOfflineMode,
   storageCount,
+  onOpenTokenLimits,
 }) => {
+  const [tokenStats, setTokenStats] = useState(getTokenStats());
+
+  useEffect(() => {
+    const handleStats = () => setTokenStats(getTokenStats());
+    window.addEventListener('token-stats-updated', handleStats);
+    return () => window.removeEventListener('token-stats-updated', handleStats);
+  }, []);
+
   return (
     <header className="sticky top-0 z-40 w-full border-b border-amber-900/10 dark:border-amber-500/20 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -105,6 +116,23 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center space-x-2">
             {/* PWA Install Button */}
             <PWAInstallButton variant="navbar" />
+
+            {/* Free Tier Token Quota Button */}
+            {onOpenTokenLimits && (
+              <button
+                onClick={onOpenTokenLimits}
+                className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-amber-300 dark:border-amber-700/80 bg-amber-50/80 text-amber-900 dark:bg-amber-950/40 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                title="คลิกเพื่อดูการใช้งานโทเค็นและขีดจำกัดเวอร์ชันฟรี"
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                <span className="font-mono font-bold">
+                  {tokenStats.todayRequests}
+                </span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:inline">
+                  /{FREE_TIER_LIMITS.rpd.toLocaleString()} ฟรี
+                </span>
+              </button>
+            )}
 
             {/* Offline Mode Toggle Button */}
             <button

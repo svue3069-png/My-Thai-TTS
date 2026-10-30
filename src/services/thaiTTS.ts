@@ -1,5 +1,10 @@
-import { ThaiVoicePersona } from '../types';
+import { ThaiVoicePersona, TokenUsage } from '../types';
 import { audioBufferToWavBlob } from './audioEngine';
+
+/**
+ * Utility to wait for a specific duration
+ */
+export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const THAI_VOICE_PERSONAS: ThaiVoicePersona[] = [
   {
@@ -61,6 +66,7 @@ export interface TTSRequestOptions {
   speed: number;
   pitch: number;
   forceOffline?: boolean;
+  isPaid?: boolean;
 }
 
 export interface TTSResponseResult {
@@ -68,6 +74,10 @@ export interface TTSResponseResult {
   duration: number;
   engine: 'gemini' | 'offline';
   voiceName: string;
+  usage?: TokenUsage;
+  fellBackFromQuota?: boolean;
+  retryAfterSeconds?: number;
+  isPaid?: boolean;
 }
 
 /**
@@ -78,45 +88,88 @@ export interface TTSResponseResult {
 export async function synthesizeThaiSpeech(
   options: TTSRequestOptions
 ): Promise<TTSResponseResult> {
-  const { text, voiceName, style, speed, pitch, forceOffline } = options;
+  const { text, voiceName, style, speed, pitch, forceOffline, isPaid } = options;
 
   if (!forceOffline && navigator.onLine) {
-    try {
-      const response = await fetch('/api/tts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text,
-          voiceName,
-          style,
-          speed,
-          pitch,
-        }),
-      });
+    let retries = 0;
+    const maxRetries = 3;
+    let baseDelay = 3000; // Increased base delay for 10 RPM models
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.audioBase64) {
-          // Convert base64 to Blob
-          const binary = atob(data.audioBase64);
-          const bytes = new Uint8Array(binary.length);
-          for (let i = 0; i < binary.length; i++) {
-            bytes[i] = binary.charCodeAt(i);
-          }
-          const blob = new Blob([bytes], { type: data.mimeType || 'audio/wav' });
+    while (retries <= maxRetries) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for long generations
 
-          return {
-            audioBlob: blob,
-            duration: data.duration || Math.max(1, text.length * 0.12),
-            engine: 'gemini',
+      try {
+        const response = await fetch('/api/tts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            text,
             voiceName,
-          };
+            style,
+            speed,
+            pitch,
+            isPaid,
+          }),
+        });
+
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.audioBase64) {
+            // Convert base64 to Blob
+            const binary = atob(data.audioBase64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+              bytes[i] = binary.charCodeAt(i);
+            }
+            const blob = new Blob([bytes], { type: data.mimeType || 'audio/wav' });
+
+            return {
+              audioBlob: blob,
+              duration: data.duration || Math.max(1, text.length * 0.12),
+              engine: 'gemini',
+              voiceName,
+              usage: data.usage,
+              isPaid: data.isPaid,
+            };
+          }
         }
+
+        // Handle Rate Limit (429) specifically
+        if (response.status === 429) {
+          const errorData = await response.json();
+          const serverRetryAfter = errorData.retryAfter ? errorData.retryAfter * 1000 : null;
+          
+          if (errorData.isDailyLimit && !isPaid) {
+            // Silently fallback to offline synthesis for daily limit to avoid interrupting user flow
+            const offlineResult = await synthesizeOfflineSpeech(text, speed, pitch, voiceName);
+            return {
+              ...offlineResult,
+              fellBackFromQuota: true,
+              retryAfterSeconds: errorData.retryAfter
+            };
+          }
+
+          // If server says wait 45s, we must wait 45s. Otherwise, we use backoff.
+          const waitTime = serverRetryAfter || (baseDelay * Math.pow(2, retries));
+          
+          await sleep(waitTime);
+          retries++;
+          continue;
+        }
+
+        // For other non-OK responses (500, 503, etc.), break and fallback
+        break;
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        retries++;
+        await sleep(baseDelay * Math.pow(1.5, retries));
       }
-    } catch (err) {
-      console.warn('Online TTS request failed, falling back to offline synthesizer:', err);
     }
   }
 
@@ -252,4 +305,31 @@ export function getLocalThaiVoices(): SpeechSynthesisVoice[] {
   return voices.filter(
     (v) => v.lang.startsWith('th') || v.lang.includes('TH') || v.name.toLowerCase().includes('thai')
   );
+}
+
+/**
+ * Generate a smart Thai title based on input text
+ */
+export async function generateAutoTitle(text: string): Promise<string> {
+  if (!text || text.trim().length < 5) return '';
+
+  try {
+    const response = await fetch('/api/generate-title', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.title || '';
+    }
+  } catch (err) {
+    console.warn('Auto-title generation failed:', err);
+  }
+  
+  // Fallback: take first line
+  return text.split('\n')[0].substring(0, 30).trim();
 }

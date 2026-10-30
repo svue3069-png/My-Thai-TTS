@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Play, Pause, RotateCcw, Volume2, VolumeX, Download, Share2, Music2, Sliders, Repeat } from 'lucide-react';
+import { Play, Pause, RotateCcw, Volume2, VolumeX, Download, Share2, Music2, Sliders, Repeat, Sparkles, FileText } from 'lucide-react';
 import { AudioItem } from '../types';
 
 interface AudioPlayerBarProps {
@@ -9,6 +9,7 @@ interface AudioPlayerBarProps {
     duration?: number;
     text?: string;
     voiceName?: string;
+    chunks?: any[];
   } | null;
   onClose?: () => void;
   onSendToSongMaker?: (audioItem: any) => void;
@@ -30,6 +31,8 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
   const [isMuted, setIsMuted] = useState(false);
   const [isLooping, setIsLooping] = useState(false);
   const [showPitchControls, setShowPitchControls] = useState(false);
+  const [activeChunkIndex, setActiveChunkIndex] = useState(-1);
+  const [showLyricsOverlay, setShowLyricsOverlay] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -55,7 +58,17 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
     };
 
     const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
+      const time = audio.currentTime;
+      setCurrentTime(time);
+
+      // Update active chunk for follow-read highlighting
+      if (currentAudio?.chunks && currentAudio.chunks.length > 0) {
+        const index = currentAudio.chunks.findIndex((chunk, i) => {
+          const nextChunk = currentAudio.chunks?.[i + 1];
+          return time >= chunk.startOffset && (!nextChunk || time < nextChunk.startOffset);
+        });
+        setActiveChunkIndex(index);
+      }
     };
 
     const handleEnded = () => {
@@ -411,15 +424,59 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
           {onOpenExport && (
             <button
               onClick={() => onOpenExport(currentAudio)}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 transition-colors flex items-center space-x-1 shadow-sm"
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 transition-colors flex items-center space-x-1 shadow-sm shrink-0"
               title="ส่งออกระดับสตูดิโอ"
             >
               <Download className="w-3.5 h-3.5" />
               <span>ส่งออก</span>
             </button>
           )}
+
+          {/* Lyrics/Follow-Read Overlay Toggle */}
+          {currentAudio.chunks && currentAudio.chunks.length > 0 && (
+            <button
+              onClick={() => setShowLyricsOverlay(!showLyricsOverlay)}
+              className={`p-1.5 rounded-lg border transition-colors shrink-0 ${
+                showLyricsOverlay 
+                  ? 'bg-amber-500 text-white border-amber-600' 
+                  : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 border-transparent'
+              }`}
+              title="แสดงข้อความอ่านตาม (Follow Read)"
+            >
+              <FileText className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Follow-Read Highlighting Overlay */}
+      {showLyricsOverlay && currentAudio.chunks && (
+        <div className="max-w-7xl mx-auto mt-3 pb-2 animate-slide-up">
+          <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 shadow-inner overflow-hidden">
+            <div className="flex flex-wrap gap-2 leading-relaxed">
+              {currentAudio.chunks.map((chunk, i) => (
+                <span
+                  key={i}
+                  onClick={() => {
+                    if (audioRef.current) {
+                      audioRef.current.currentTime = chunk.startOffset;
+                      setCurrentTime(chunk.startOffset);
+                      if (!isPlaying) togglePlay();
+                    }
+                  }}
+                  className={`px-1.5 py-0.5 rounded-md cursor-pointer transition-all duration-300 text-sm ${
+                    i === activeChunkIndex
+                      ? 'bg-amber-500 text-white font-bold scale-105 shadow-md shadow-amber-500/20'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-amber-100 dark:hover:bg-amber-950/40'
+                  }`}
+                >
+                  {chunk.text}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
